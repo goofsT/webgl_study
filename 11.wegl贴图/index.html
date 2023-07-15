@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="container" width="400" height="400"></canvas>
+    <script type="module">
+        import { initShader } from '../initShaders.js'
+        import { mat4, glMatrix } from '../glMatrix/esm/index.js'
+        const canvas = document.getElementById('container')
+        const gl = canvas.getContext('webgl')
+        let vertexShader = `
+        attribute vec3 a_position;
+        attribute vec2 a_uv;
+        varying vec2 v_uv;
+        void main(){
+            gl_Position=vec4(a_position,1.0);
+            v_uv=a_uv;
+        }
+        `
+        let fragmentShader = `
+        precision mediump float;
+        varying vec2 v_uv;
+        uniform sampler2D u_texture;
+        void main(){
+            vec4 color=texture2D(u_texture,v_uv);
+            //vec4 color1=texture2D(u_texture1,v_uv);
+            //vec4 color2=texture2D(u_texture2,v_uv);
+            //gl_FragCOlor=color1*color2;颜色计算 得到两张贴图混合结果
+            gl_FragColor=color;
+        }
+        `
+        initShader(gl, vertexShader, fragmentShader)
+        initVertexBuffer()
+        initTextures()
+
+
+
+        function initVertexBuffer() {
+            //四个顶点坐标信息
+            
+            let vertices = new Float32Array([
+                -0.5, -0.5, 0.0,   0.0, 0.0,
+                0.5, -0.5, 0.0,    3.0, 0.0,
+                0.5, 0.5, 0.0,     3.0, 3.0,
+                -0.5, 0.5, 0.0,    0.0,3.0
+            ])
+
+            /*
+            贴图与形状四个顶点相对应
+            let vertices = new Float32Array([
+                -0.5, -0.5, 0.0,   0.0, 0.0,
+                0.5, -0.5, 0.0,    1.0, 0.0,
+                0.5, 0.5, 0.0,     1.0, 1.0,
+                -0.5, 0.5, 0.0,    0.0,1.0
+            ])
+            */
+            
+
+            let FSIZE = vertices.BYTES_PER_ELEMENT
+            let buffer = gl.createBuffer()
+            if(!buffer) console.log('创建buffer失败');
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
+
+            let a_uv = gl.getAttribLocation(gl.program, 'a_uv')
+            gl.vertexAttribPointer(a_uv,2,gl.FLOAT,false, FSIZE * 5, FSIZE * 3)
+            gl.enableVertexAttribArray(a_uv)
+
+            let a_position = gl.getAttribLocation(gl.program, 'a_position')
+            gl.vertexAttribPointer(a_position,3, gl.FLOAT, false, FSIZE * 5, 0)
+            gl.enableVertexAttribArray(a_position)
+
+        }
+
+
+        function initTextures() {
+
+            let texture = gl.createTexture()
+            let u_texture = gl.getUniformLocation(gl.program, 'u_texture');
+            let image = new Image();
+            image.crossOrigin=""//解决跨域
+            image.src = './test.jpg';
+            image.onload = function () {
+                //翻转y
+                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true)
+                gl.activeTexture(gl.TEXTURE0)
+                gl.bindTexture(gl.TEXTURE_2D, texture)
+
+
+
+                /*问题出在纹理参数的设置上。
+                  webgl默认图像源的尺寸为2的n次幂，
+                 比如宽为256、高为256的图像可以正常显示
+                 但宽为256、高为300的图像不能正常显示。
+                 解决：gl.CLAMP_TO_EDGE
+                t
+
+
+                         s
+
+                gl.REPEAT:x/y 平铺
+                gl.CLAMP_TO_EDGE:x/y最外侧像素延伸
+                gl.MIRRORED_REPEAT :x/y方向镜像平铺
+                */
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+
+               
+                /*
+                小图贴到大的形状上：gl.TEXTURE_MAG_FILTER
+                大图贴到小的形状上：gl.TEXTURE_MIN_FILTER
+                gl.LINEAR 线性 效果较好
+                gl.NEAREST 取最近  处理较快
+                */
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+                gl.uniform1i(u_texture,0);
+                draw();
+            }
+
+        }
+
+
+        function draw() {
+            gl.clearColor(0.5, 0.5, 0.5, 1.0)
+            gl.clear(gl.COLOR_BUFFER_BIT)
+            gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
+        }
+
+
+
+    </script>
+</body>
+
+</html>

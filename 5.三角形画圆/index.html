@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <canvas id="container" width="400" height="400"></canvas>
+    <script type="module">
+        import {initShader} from '../initShaders.js'
+        const canvas = document.getElementById("container")
+        let gl = canvas.getContext("webgl")
+        let vertexSource = `
+        attribute vec2 a_position;
+        attribute vec3 a_color;
+        varying vec3 v_color;
+            void main(){ 
+             v_color=a_color;   
+             gl_Position=vec4(a_position,0.0,1.0);
+            }
+        `   
+        let fragmentSource = `
+        precision mediump float;
+        varying vec3 v_color;
+            void main(){
+                gl_FragColor=vec4(v_color,1.0);
+            }
+        `
+        //调用封装后的初始化程序
+        initShader(gl, vertexSource, fragmentSource)
+
+        //清空画布
+        // gl.clearColor(0.0, 0.0, 0.0, 1.0) 
+        gl.clear(gl.COLOR_BUFFER_BIT)
+
+
+        //三角形三个顶点信息
+        let vertices=[]
+        let num=60
+        const R=0.8
+        for(let i=0;i<num;i++){
+            // 使用极坐标计算
+            let deg=2*Math.PI/num*i
+            let x=Math.cos(deg)*R
+            let y=Math.sin(deg)*R
+
+            let r=Math.random()*5
+            let g=Math.random()
+            let b=Math.random()
+            vertices.push(x,y,r,g,b)
+        }    
+        vertices=new Float32Array(vertices)
+
+
+        let FSIZE=vertices.BYTES_PER_ELEMENT  //4
+        /* 
+         buffer：五个步骤 
+        */
+        
+        // 1.创建一个buffer
+        let buffer=gl.createBuffer()
+        // 2.绑定buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER,buffer)
+        // 3.buffer放数据
+        gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW)
+        // 4.把带有数据的buffer赋值给attribute
+        let pLocation=gl.getAttribLocation(gl.program,'a_position')
+        let cLocation=gl.getAttribLocation(gl.program,'a_color')
+        gl.vertexAttribPointer(
+            pLocation,//属性名
+            2,//每个顶点占用的个数
+            gl.FLOAT,//浮点数格式
+            false,//不需要归一化
+            5*FSIZE,//步幅
+            0 //偏移量  从第几个开始
+        )
+        gl.vertexAttribPointer(
+            cLocation,//属性名
+            3,//每个顶点占用的个数
+            gl.FLOAT,//浮点数格式
+            false,//不需要归一化
+            5*FSIZE,
+            2*FSIZE  //因为位置数据占了2个位置，所以需要偏移
+        )
+        // 5.确认
+        gl.enableVertexAttribArray(pLocation)
+        gl.enableVertexAttribArray(cLocation)
+
+
+        /* 七种webgl基本形状 */
+
+        // gl.drawArrays(gl.POINTS,0,num)//画点
+        // gl.drawArrays(gl.LINES,0,num)//画线 两两相连
+        // gl.drawArrays(gl.LINE_STRIP,0,num)//画线 相连
+        gl.drawArrays(gl.LINE_LOOP,0,num)//画线 闭环
+
+
+        // gl.drawArrays(gl.TRIANGLES,0,num)  //画三角   
+        // gl.drawArrays(gl.TRIANGLES_STRIP,0,num)
+        gl.drawArrays(gl.TRIANGLE_FAN,0,num)
+    
+        
+        
+        
+
+       
+
+
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <canvas id="container" width="400" height="400"></canvas>
+    <script type="module">
+        import {initShader} from '../initShaders.js'
+        const canvas = document.getElementById("container")
+        let gl = canvas.getContext("webgl")
+
+        // vertexShader,fragmentSShader
+        let vertexSource = `
+            attribute vec2 a_position;//位置
+            attribute float a_size;//大小
+            varying vec2 c_position;
+            void main(){
+             c_position=a_position;   
+             gl_Position=vec4(a_position,0.0,1.0);
+             gl_PointSize=a_size;
+            }
+        `   
+        let fragmentSource = `
+            precision mediump float;//精度
+            varying vec2 c_position;
+            uniform vec3 a_color;
+            void main(){
+                gl_FragColor=vec4(a_color,1.0);
+            }
+        `
+        //调用封装后的初始化程序
+        initShader(gl, vertexSource, fragmentSource)
+
+
+        gl.clearColor(0.5, 0.5, 0.5, 1.0) //rgba
+        gl.clear(gl.COLOR_BUFFER_BIT) //清空颜色
+        //画一个点
+
+        let x = 0; 
+        let y = 0; 
+        let n = 100
+        let size = 5.0
+        let r=0.5
+        let colorR,colorG,colorB
+        for (let i = 0; i < n; i++) {
+            x = Math.sin(i) * r
+            y = Math.cos(i) * r
+            colorR=Math.random()
+            colorG=Math.random()
+            colorB=Math.random()
+            //使用attribute将js数据传入顶点着色器
+            //uniform,两个着色器都可以传递
+            //varying ，把顶点着色器(vertexShaer)数据传递到片段着色器(fragmentShader)
+            let sizeInfo = gl.getAttribLocation(gl.program, 'a_size')
+            let positionInfo = gl.getAttribLocation(gl.program, 'a_position')
+            
+            gl.vertexAttrib2f(positionInfo, x, y)
+            gl.vertexAttrib1f(sizeInfo, size)
+
+
+            //获取uniform变量
+            let colorInfo=gl.getUniformLocation(gl.program,'a_color')
+            //为变量赋值
+            gl.uniform3f(colorInfo,colorR,colorG,colorB)
+
+            // 画点
+            gl.drawArrays(gl.POINTS, 0, 1)
+        }
+
+
+
+    </script>
+</body>
+
+</html>

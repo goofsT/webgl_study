@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        canvas{
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" ></canvas>
+    <script>
+//data为树形数据
+let data=[{id:1, pid:0, name:'沃尔玛', childrens:[
+      {id:2, pid:1, name:'生鲜区', childrens:[
+         	 {id:4, pid:2, name:'鱼'},
+       		 {id:5, pid:2, name:'牛肉'}
+      ]},
+      {id:3, pid:1, name:'日用品区',childrens:[
+            {id:6, pid:3, name:'卫生纸'},
+            {id:7, pid:3, name:'牙刷'}
+      ]}
+]}]
+let result=[]
+getData(data)
+function getData(d){
+    d.forEach(item=>{
+        if(item.childrens){
+            getData(item.childrens)
+            delete item.childrens
+        }
+        result.push({...item})
+    })
+}
+console.log(result)
+
+       
+    </script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <canvas id="container" width="400" height="400"></canvas>
+    <script type="module">
+        import {initShader} from '../initShaders.js'
+        const canvas = document.getElementById("container")
+        let gl = canvas.getContext("webgl")
+        let vertexSource = `
+        attribute vec2 a_position;
+        attribute vec3 a_color;
+        varying vec3 v_color;
+            void main(){ 
+             v_color=a_color;   
+             gl_Position=vec4(a_position,0.0,1.0);
+            }
+        `   
+        let fragmentSource = `
+        precision mediump float;
+        varying vec3 v_color;
+            void main(){
+                gl_FragColor=vec4(v_color,1.0);
+            }
+        `
+        //调用封装后的初始化程序
+        initShader(gl, vertexSource, fragmentSource)
+
+        //清空画布
+        gl.clearColor(0.0, 0.0, 0.0, 1.0) 
+        gl.clear(gl.COLOR_BUFFER_BIT)
+
+
+        //三角形三个顶点信息
+        let vertices=[
+            // x  y    r g b
+            -0.5,0.0, 1.0,0.0,0.0,
+            0.5,0.0, 0.0,1.0,0.0,
+            0.0,0.8, 0.0,0.0,1.0
+        ]
+        vertices=new Float32Array(vertices)
+            
+        let FSIZE=vertices.BYTES_PER_ELEMENT  //4
+        /* 
+         buffer：五个步骤 
+        */
+        
+        // 1.创建一个buffer
+        let buffer=gl.createBuffer()
+        // 2.绑定buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER,buffer)
+        // 3.buffer放数据
+        gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW)
+        // 4.把带有数据的buffer赋值给attribute
+        let pLocation=gl.getAttribLocation(gl.program,'a_position')
+        let cLocation=gl.getAttribLocation(gl.program,'a_color')
+        gl.vertexAttribPointer(
+            pLocation,//属性名
+            2,//每个顶点占用的个数
+            gl.FLOAT,//浮点数格式
+            false,//不需要归一化
+            5*FSIZE,//步幅
+            0 //偏移量  从第几个开始
+        )
+        gl.vertexAttribPointer(
+            cLocation,//属性名
+            3,//每个顶点占用的个数
+            gl.FLOAT,//浮点数格式
+            false,//不需要归一化
+            5*FSIZE,
+            2*FSIZE  //因为位置数据占了2个位置，所以需要偏移
+        )
+        // 5.确认
+        gl.enableVertexAttribArray(pLocation)
+        gl.enableVertexAttribArray(cLocation)
+        //画点    
+        gl.drawArrays(gl.TRIANGLES,0,3)
+        
+
+       
+
+
+
+    </script>
+</body>
+
+</html>

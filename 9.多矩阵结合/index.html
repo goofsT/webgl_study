@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="container" width="400" height="400"></canvas>
+    <script type="module">
+        import { initShader } from '../initShaders.js'
+        import { mat4,glMatrix } from '../glMatrix/esm/index.js'
+        const canvas = document.getElementById('container')
+        const gl = canvas.getContext('webgl')
+        let vertexShader = `
+        attribute vec3 a_position;
+        uniform mat4 t_matrix;
+        uniform mat4 s_matrix;
+        uniform mat4 r_matrix;
+        void main(){
+            //注意线进行平移和后进行平移得到的视图是不同的
+            //模型矩阵，共同作用带来的影响
+            mat4 modelMatrix=t_matrix*s_matrix*r_matrix;
+            gl_Position=modelMatrix*vec4(a_position,1.0);
+        }
+        `
+        let fragmentShader = `
+        precision mediump float;
+        
+        void main(){
+            gl_FragColor=vec4(1.0,0.0,0.0,1.0);
+        }
+        `
+        let tMatrix,sMatrix,rMatrix
+        initShader(gl, vertexShader, fragmentShader)
+        initVertexBuffer()
+        initMatrixs()
+        draw()
+
+
+
+
+
+
+        function initMatrixs(){
+            tMatrix=mat4.create()
+            sMatrix=mat4.create()
+            rMatrix=mat4.create()
+            mat4.fromTranslation(tMatrix,[0.3,0.0,0.0])
+            mat4.fromScaling(sMatrix,[1,2,1])
+            mat4.fromRotation(rMatrix,glMatrix.toRadian(90),[0,0,1])
+
+            //传入uniform变量
+            let r_matrix=gl.getUniformLocation(gl.program,'r_matrix')
+            gl.uniformMatrix4fv(r_matrix,false,rMatrix)
+            let s_matrix=gl.getUniformLocation(gl.program,'s_matrix')
+            gl.uniformMatrix4fv(s_matrix,false,sMatrix)
+            let t_matrix=gl.getUniformLocation(gl.program,'t_matrix')
+            gl.uniformMatrix4fv(t_matrix,false,tMatrix)
+        }
+
+
+
+        function initVertexBuffer() {
+            let vertices = new Float32Array([
+                -0.2, -0.2, 0.0,
+                0.2, -0.2, 0.0,
+                0.0, 0.2, 0.0
+            ])
+
+            let FSIZE = vertices.BYTES_PER_ELEMENT
+
+            let buffer = gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
+
+            let a_position = gl.getAttribLocation(gl.program, 'a_position')
+            gl.vertexAttribPointer(
+                a_position,
+                3,
+                gl.FLOAT,
+                false,
+                0,
+                0)
+            gl.enableVertexAttribArray(a_position)
+        }
+
+
+
+        function draw() {
+            gl.clearColor(0.0, 0.0, 0.0, 1.0)
+            gl.clear(gl.COLOR_BUFFER_BIT)
+            gl.drawArrays(gl.TRIANGLE_FAN, 0, 3)
+        }
+
+
+
+    </script>
+</body>
+
+</html>

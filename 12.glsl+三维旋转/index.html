@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="container" width="400" height="400"></canvas>
+    <script type="module">
+        import { initShader } from '../initShaders.js'
+        import { mat4,glMatrix } from '../glMatrix/esm/index.js'
+        import vertexShader from './shader/vertexShader.js'
+        import fragmentShader from './shader/fragmentShader.js'
+        const canvas = document.getElementById('container')
+        const gl = canvas.getContext('webgl')
+        
+
+        let deg=0
+        let time=Date.now()
+        let rotateMatrix=mat4.create()
+
+
+        initShader(gl, vertexShader, fragmentShader)
+        initVertexBuffer()
+        render()
+
+        function initVertexBuffer() {
+            let vertices=new Float32Array([
+                -0.5,0.5,0.0, 
+                -0.5,-0.5,0.0,
+                0.5,-0.5,0.0,
+                0.5,0.5,0.0
+            ])
+            let FSIZE=vertices.BYTES_PER_ELEMENT
+            let buffer=gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER,buffer)
+            gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW)
+            let a_position=gl.getAttribLocation(gl.program,'a_position')
+            gl.vertexAttribPointer(a_position,3,gl.FLOAT,false,0,0)
+            gl.enableVertexAttribArray(a_position)
+
+        }
+
+        function render(){
+
+            //通过时间戳之间的计算 让其在不同显示器下的得到的值相同(deltaTime)
+            let newTime=Date.now()
+            let deltaTime=newTime-time
+            time=newTime
+            // console.log(deltaTime);//16~17
+
+            deg+=deltaTime/50
+
+
+            mat4.fromRotation(rotateMatrix,deg/180*Math.PI,[1,1,0])
+            let u_rotateMatrix=gl.getUniformLocation(gl.program,'u_rotateMatrix')
+            gl.uniformMatrix4fv(u_rotateMatrix,false,rotateMatrix)
+            draw()
+            requestAnimationFrame(render)
+        }
+
+        function draw() {
+            gl.clearColor(0.5, 0.5, 0.5, 1.0)
+            gl.clear(gl.COLOR_BUFFER_BIT)
+            gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
+        }
+
+
+    </script>
+</body>
+
+</html>

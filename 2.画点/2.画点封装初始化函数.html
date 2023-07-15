@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="container" width="400" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById("container")
+        let gl = canvas.getContext("webgl")
+        // vertexShader,fragmentSShader
+        let vertexSource = `
+        attribute vec2 a_position;
+        attribute float a_size;
+        void main(){
+            gl_Position=vec4(a_position,0.0,1.0);
+            gl_PointSize=a_size;
+        }
+        `//glsl
+        let fragmentSource = `
+        void main(){
+            gl_FragColor=vec4(0.0,1.0,0.0,1.0);
+        }
+        `
+        //调用封装后的初始化程序
+        initShaders(gl,vertexSource,fragmentSource)
+
+        gl.clearColor(0.5, 0.5, 0.5, 1.0) //rgba
+        gl.clear(gl.COLOR_BUFFER_BIT) //清空颜色
+        //画一个点
+
+
+        // let position=new Float32Array([0.6,0.6])
+        // // 将js点的位置给着色器
+        // let positionInfo=gl.getAttribLocation(gl.program,'a_position')
+        // // gl.vertexAttrib2f(locationInfo,-0.8,0.6)//写法一   （locationInfo,...postiton）
+        // gl.vertexAttrib2fv(locationInfo,position)//写法二
+
+        let x=0;y=0;n=1000
+        let size=1.0
+        for(let i=0;i<n;i++){
+            let r=i/1000
+            x=Math.sin(i)*r
+            y=Math.cos(i)*r
+            size+=0.001
+            let sizeInfo=gl.getAttribLocation(gl.program,'a_size')
+            let positionInfo=gl.getAttribLocation(gl.program,'a_position')
+            gl.vertexAttrib2f(positionInfo,x,y)
+            gl.vertexAttrib1f(sizeInfo,size)
+            gl.drawArrays(gl.POINTS,0,1)    
+        }
+
+        //初始化着色器
+        function createShader(gl, type, source) {
+            let shader = gl.createShader(type)
+            gl.shaderSource(shader, source)
+
+            gl.compileShader(shader)
+            //判断编译时出错
+            let compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS)
+            if (compiled) {
+                return shader
+            } else {
+                let error = gl.getShaderInfoLog(shader)//获取编译时错误
+                console.log('compile shader error! ' + error);
+                gl.deleteShader(shader)
+                return null
+            }
+        }
+        //创建着色器程序
+        function createProgram(gl, FShader, Vshader) {
+            let program = gl.createProgram()//创建
+            if (!program) return null
+
+            //为Program添加着色器
+            gl.attachShader(program, FShader)
+            gl.attachShader(program, Vshader)
+
+
+            gl.linkProgram(program)
+            let linked = gl.getProgramParameter(program, gl.LINK_STATUS)
+            if (linked) {
+                return program
+            } else {
+                let error = gl.getProgramInfoLog(program)//获取编译时错误
+                console.log('link program error! ' + error);
+                gl.deleteProgram(program)
+                gl.deleteShader(FShader)
+                gl.deleteShader(VShader)
+                return null
+            }
+            return program
+        }
+
+        //初始化着色器程序
+        function initShaders(gl, vertexSource, fragmentSource) {
+            //创建着色器
+            let fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentSource)
+            let vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexSource)
+
+            //创建着色器程序
+            let program = createProgram(gl, fragmentShader, vertexShader)
+            if(program){
+                gl.useProgram(program)
+                gl.program=program
+                return true
+            }
+            console.log("Failed to create program");
+            return false
+        }
+
+
+
+    </script>
+</body>
+
+</html>

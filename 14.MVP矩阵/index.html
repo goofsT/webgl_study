@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="container" width="400" height="400"></canvas>
+    <script type="module">
+        /*
+        MVP 
+
+            Model Matrix 模型矩阵(平移，旋转，缩放，物体本身的移动)
+            view Matrix 视图矩阵（物体不动，视角移动）通俗理解：眼睛在哪，看向哪，向上的方向是什么
+            projection Matrix 投影矩阵(正交投影 (矩形区域可视)，透视投影(椎体区域可视,近大远小))
+        
+            M*V*P*原始坐标=最终效果
+        
+        */
+        import { initShader } from '../initShaders.js'
+        import { mat4, glMatrix } from '../glMatrix/esm/index.js'
+        import { positions, colors } from './cubeData.js'
+        import vertexShader from './shader/vertexShader.js'
+        import fragmentShader from './shader/fragmentShader.js'
+        const canvas = document.getElementById('container')
+        const gl = canvas.getContext('webgl')
+
+
+        //初始化旋转角度
+        let deg = 0
+        let time = Date.now()
+        /*初始化矩阵*/
+        //模型矩阵
+        let rotateMatrix = mat4.create()
+        let scaleMatrix = mat4.create()
+        let translateMatrix = mat4.create()
+        //视图矩阵
+        let viewMatrix = mat4.create()
+
+        //投影矩阵（正交）
+        let orthoMatrix = mat4.create()
+        //投影矩阵 (透视)
+        let perspectiveMatrix = mat4.create()
+
+
+        //视图矩阵参数
+        let eys = [0.5, 0.5, 1] //眼睛位置
+        let center = [0, 0, 0] //看向原点
+        let up = [0, 1, 0] //上方向为y轴方向
+
+
+        initShader(gl, vertexShader, fragmentShader)
+        initVertexBuffer()
+        render()
+
+        function initVertexBuffer() {
+
+            let FSIZE = positions.BYTES_PER_ELEMENT
+            let buffer = gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
+            let a_position = gl.getAttribLocation(gl.program, 'a_position')
+            gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, FSIZE * 3, 0)
+            gl.enableVertexAttribArray(a_position)
+
+
+            let colorBuffer = gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer)
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW)
+            let a_color = gl.getAttribLocation(gl.program, 'a_color')
+            gl.vertexAttribPointer(a_color, 3, gl.FLOAT, false, FSIZE * 3, 0)
+            gl.enableVertexAttribArray(a_color)
+        }
+
+        function render() {
+
+            //通过时间戳之间的计算 让其在不同显示器下的得到的值相同(deltaTime)
+            let newTime = Date.now()
+            let deltaTime = newTime - time
+            time = newTime
+            // console.log(deltaTime);//16~17
+
+            //方便控制动画速度
+            deg += deltaTime / 30
+
+            //创建模型矩阵
+            mat4.fromRotation(rotateMatrix, deg / 180 * Math.PI, [0, 0, 0])
+            mat4.fromTranslation(translateMatrix, [0, 0, 0])
+            mat4.fromScaling(scaleMatrix, [0.5, 0.5, 0.5])
+
+            //创建视图矩阵
+            mat4.lookAt(viewMatrix, eys, center, up)
+
+
+            //创建投影矩阵（正交）长方体
+            //(矩阵，左，右，上，下，近，远)
+            mat4.ortho(orthoMatrix, -1, 1, -1, 1, 0, 10)
+
+
+             //创建投影矩阵（透视）视椎体 
+            //(矩阵，视锥角度，视锥宽高比,近端，远端)
+            mat4.perspective(perspectiveMatrix, 90/180*Math.PI,1.0,0.1,5)
+
+
+
+            //获取着色器uniform变量
+            let u_rotateMatrix = gl.getUniformLocation(gl.program, 'u_rotateMatrix')
+            let u_translateMatrix = gl.getUniformLocation(gl.program, 'u_translateMatrix')
+            let u_scaleMatrix = gl.getUniformLocation(gl.program, 'u_scaleMatrix')
+            let u_viewMatrix = gl.getUniformLocation(gl.program, 'u_viewMatrix')
+            let u_orthoMatrix = gl.getUniformLocation(gl.program, "u_orthoMatrix")
+            let u_perspectiveMatrix=gl.getUniformLocation(gl.program, "u_perspectiveMatrix")
+            //uniform变量赋值
+            gl.uniformMatrix4fv(u_rotateMatrix, false, rotateMatrix)
+            gl.uniformMatrix4fv(u_translateMatrix, false, translateMatrix)
+            gl.uniformMatrix4fv(u_scaleMatrix, false, scaleMatrix)
+            gl.uniformMatrix4fv(u_viewMatrix, false, viewMatrix)
+            gl.uniformMatrix4fv(u_orthoMatrix, false, orthoMatrix)
+            gl.uniformMatrix4fv(u_perspectiveMatrix, false, perspectiveMatrix)
+            
+
+
+
+            //键盘按下改变视图矩阵（眼睛位置）
+            window.addEventListener('keydown', function (e) {
+                console.log(e.keyCode);
+                let step = 0.1
+                if (e.keyCode === 37) {
+                    //键盘左箭头按下，视角左移
+                    eys[0] -= step
+                } else if (e.keyCode === 39) {
+                    //键盘右箭头按下，视角右移
+                    eys[0] += step
+                }
+                else if (e.keyCode === 38) {
+                    //键盘上箭头按下，视角上移
+                    eys[1] -= step
+                }
+                else if (e.keyCode === 40) {
+                    //键盘下箭头按下，视角下移
+                    eys[1] += step
+                }
+
+                mat4.lookAt(viewMatrix, eys, center, up)
+                let u_viewMatrix = gl.getUniformLocation(gl.program, 'u_viewMatrix')
+                gl.uniformMatrix4fv(u_viewMatrix, false, viewMatrix)
+                draw()
+            })
+
+            draw()
+            // requestAnimationFrame(render)
+        }
+
+
+
+
+        tick()
+        //动画0改变视角位置(视图矩阵)
+        function tick() {
+            let time = Date.now()
+            eys[0] = Math.sin(time / 10000)
+            eys[1]=Math.sin(time/1000)
+            eys[2] = Math.cos(time / 1000)
+            mat4.lookAt(viewMatrix, eys, center, up)
+            let u_viewMatrix = gl.getUniformLocation(gl.program, 'u_viewMatrix')
+            gl.uniformMatrix4fv(u_viewMatrix, false, viewMatrix)
+            draw()
+            requestAnimationFrame(tick)
+        }
+
+
+
+        function createCube(){
+            
+        }
+
+
+        function draw() {
+            gl.clearColor(0.5, 0.5, 0.5, 1.0)
+            gl.clear(gl.COLOR_BUFFER_BIT)
+
+
+            //开启深度测试 根据坐标情况让前面的像素覆盖后面的像素
+            gl.enable(gl.DEPTH_TEST)
+
+
+            // 使用gl.TRIANGLE_FAN连着画24个点会导致连接在一起，发生颜色错误
+            // gl.drawArrays(gl.TRIANGLE_FAN, 0,24)
+
+            // 所以需要一个面一个面的去画  一个24个点 6个面
+            // gl.drawArrays(gl.TRIANGLE_FAN,0,4)
+            // gl.drawArrays(gl.TRIANGLE_FAN,4,4)
+            // gl.drawArrays(gl.TRIANGLE_FAN,8,4)
+            // gl.drawArrays(gl.TRIANGLE_FAN,12,4)
+            // gl.drawArrays(gl.TRIANGLE_FAN,16,4)
+            // gl.drawArrays(gl.TRIANGLE_FAN,20,4)
+
+            for (let i = 0; i < 24; i += 4) {
+                gl.drawArrays(gl.TRIANGLE_FAN, i, 4)
+            }
+        }
+
+
+    </script>
+</body>
+
+</html>

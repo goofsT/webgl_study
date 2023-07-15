@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="container" width="400" height="400"></canvas>
+    <script type="module">
+        import { initShader } from '../initShaders.js'
+        import { mat4,glMatrix } from '../glMatrix/esm/index.js'
+        import {positions,colors} from './cubeData.js'
+        import vertexShader from './shader/vertexShader.js'
+        import fragmentShader from './shader/fragmentShader.js'
+        const canvas = document.getElementById('container')
+        const gl = canvas.getContext('webgl')
+        
+
+        let deg=0
+        let time=Date.now()
+        let rotateMatrix=mat4.create()
+
+
+        initShader(gl, vertexShader, fragmentShader)
+        initVertexBuffer()
+        render()
+
+        function initVertexBuffer() {
+            
+            let FSIZE=positions.BYTES_PER_ELEMENT
+            let buffer=gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER,buffer)
+            gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(positions),gl.STATIC_DRAW)
+            let a_position=gl.getAttribLocation(gl.program,'a_position')
+            gl.vertexAttribPointer(a_position,3,gl.FLOAT,false,FSIZE*3,0)
+            gl.enableVertexAttribArray(a_position)
+
+
+
+            let colorBuffer=gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER,colorBuffer)
+            gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(colors),gl.STATIC_DRAW)
+            let a_color=gl.getAttribLocation(gl.program,'a_color')
+            gl.vertexAttribPointer(a_color,3,gl.FLOAT,false,FSIZE*3,0)
+            gl.enableVertexAttribArray(a_color)
+        }
+
+        function render(){
+
+            //通过时间戳之间的计算 让其在不同显示器下的得到的值相同(deltaTime)
+            let newTime=Date.now()
+            let deltaTime=newTime-time
+            time=newTime
+            // console.log(deltaTime);//16~17
+
+            //方便控制动画速度
+            deg+=deltaTime/30
+
+
+            mat4.fromRotation(rotateMatrix,deg/180*Math.PI,[1,1,0])
+            let u_rotateMatrix=gl.getUniformLocation(gl.program,'u_rotateMatrix')
+            gl.uniformMatrix4fv(u_rotateMatrix,false,rotateMatrix)
+            draw()
+            requestAnimationFrame(render)
+        }
+
+        function draw() {
+            gl.clearColor(0.5, 0.5, 0.5, 1.0)
+            gl.clear(gl.COLOR_BUFFER_BIT)
+    
+           
+            //开启深度测试 根据坐标情况让前面的像素覆盖后面的像素
+            gl.enable(gl.DEPTH_TEST)
+
+
+
+             // 使用gl.TRIANGLE_FAN连着画24个点会导致连接在一起，发生颜色错误
+            // gl.drawArrays(gl.TRIANGLE_FAN, 0,24)
+
+            // 所以需要一个面一个面的去画  一个24个点 6个面
+            // gl.drawArrays(gl.TRIANGLE_FAN,0,4)
+            // gl.drawArrays(gl.TRIANGLE_FAN,4,4)
+            // gl.drawArrays(gl.TRIANGLE_FAN,8,4)
+            // gl.drawArrays(gl.TRIANGLE_FAN,12,4)
+            // gl.drawArrays(gl.TRIANGLE_FAN,16,4)
+            // gl.drawArrays(gl.TRIANGLE_FAN,20,4)
+
+            for(let i=0;i<24;i+=4){
+                gl.drawArrays(gl.TRIANGLE_FAN, i, 4)
+            }
+        }
+
+
+    </script>
+</body>
+
+</html>
