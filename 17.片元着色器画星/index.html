@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        canvas {
+            border: 1px solid #000;
+            background: url("./sky.jpg");
+            background-size: cover;
+            background-position: right bottom;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas" width="600" height="600"></canvas>
+    <script id="vertextShader" type="x-shader/x-vertex">
+        attribute vec2 a_position;
+        attribute float a_size;
+        attribute vec4 a_color;
+        varying vec4 u_color;
+        void main(){
+            gl_Position=vec4(a_position,0.0,1.0);
+            gl_PointSize=a_size;
+            u_color=a_color;
+        }
+    </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        precision mediump float;
+        varying vec4 u_color;
+        void main(){
+            //计算片元到中心的距离 获取到片元内圆形区域
+            float d=distance(gl_PointCoord,vec2(0.5,0.5));
+            if(d<=0.5){
+                gl_FragColor=u_color;
+            }else{
+                //擦除
+                discard;
+            }
+        }
+    </script>
+    <script type="module">
+        import { initShaders, Compose, Track } from '../util.js'
+        const canvas = document.getElementById("canvas")
+        let gl = canvas.getContext("webgl")
+        gl.enable(gl.BLEND);//开启混合模式
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);//混合模式
+        let x, y, s, a, particles = [];
+        let maxStartSize = 5, minStartSize = 1;
+        const compose = new Compose()
+        canvas.addEventListener("click", (e) => {
+            const { clientX, clientY } = e
+            const { left, top } = canvas.getBoundingClientRect()
+            x = (clientX - left) / canvas.width * 2 - 1
+            y = -(clientY - top) / canvas.height * 2 + 1
+            a = Math.random()
+            s = Math.random() * (maxStartSize - minStartSize) + minStartSize
+            const obj = { x, y, s, a }
+            particles.push(obj)
+            const track = new Track(obj)//构建关键帧动画
+            track.timeLen = 2000
+            track.loop = true
+            track.start = Date.now()
+            track.keyMap = new Map([
+                ['a', [
+                    [500, a],
+                    [1000, 0],
+                    [1500, a]
+                ]
+                ]
+            ])
+            compose.add(track)
+            particles.track = track
+        })
+
+        initShaders(gl, document.getElementById('vertextShader').textContent, document.getElementById('fragmentShader').textContent)
+        gl.clearColor(0, 0, 0, 0) //透明底色 方便看到背景图
+        gl.clear(gl.COLOR_BUFFER_BIT) //清空颜色
+
+        !(function ani() {
+            compose.update(Date.now())
+            render()
+            requestAnimationFrame(ani)
+        })()
+        function render() {
+            gl.clear(gl.COLOR_BUFFER_BIT)
+            let sizeInfo = gl.getAttribLocation(gl.program, 'a_size')
+            let positionInfo = gl.getAttribLocation(gl.program, 'a_position')
+            let colorInfo = gl.getAttribLocation(gl.program, 'a_color')
+            particles.forEach(item => {
+                if (item.track) {
+                    item.track.update(Date.now())
+                    item.a = item.track.target.a
+                }
+                gl.vertexAttrib2f(positionInfo, item.x, item.y)
+                gl.vertexAttrib1f(sizeInfo, item.s)
+                gl.vertexAttrib4f(colorInfo, 0.87, 0.91, 1, item.a)
+                gl.drawArrays(gl.POINTS, 0, 1)
+            })
+        }
+    </script>
+</body>
+
+</html>

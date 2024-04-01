@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        canvas {
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas" width="600" height="600"></canvas>
+    <script type="module">
+        import { initShaders } from '../util.js'
+
+        const canvas = document.getElementById("canvas")
+        let gl = canvas.getContext("webgl")
+        let x, y, particles = [];
+        let color = { r: 0, g: 0, b: 0, a: 1 }
+        canvas.addEventListener("click", (e) => {
+            //点击的窗口坐标
+            const { clientX, clientY } = e
+            //获取canvas的左上角坐标
+            const { left, top } = canvas.getBoundingClientRect()
+            /*
+            在 WebGL 中，设备坐标范围为 [-1, 1]，其中 (-1, -1) 是左下角，(1, 1) 是右上角
+            所以，我们点击的坐标需要转换成 WebGL 的设备坐标 将范围映射到 [-1, 1]即可得到归一化设备坐标
+            */
+            x = (clientX - left) / canvas.width * 2 - 1
+            y = -(clientY - top) / canvas.height * 2 + 1
+            color.r = Math.random() * 256 / 255
+            color.g = Math.random() * 256 / 255
+            color.b = Math.random() * 256 / 255
+            particles.push({ x, y, c: JSON.parse(JSON.stringify(color)) })
+            render()
+        })
+
+        let vertexSource = `
+        attribute vec2 a_position;
+        attribute float a_size;
+        attribute vec4 a_color;
+        varying vec4 u_color;
+        void main(){
+            gl_Position=vec4(a_position,0.0,1.0);
+            gl_PointSize=a_size;
+            u_color=a_color;
+        }
+        `//glsl
+        let fragmentSource = `
+        precision mediump float;
+        varying vec4 u_color;
+        void main(){
+            gl_FragColor=u_color;
+        }
+        `
+        initShaders(gl, vertexSource, fragmentSource)
+        gl.clearColor(0.5, 0.5, 0.5, 1.0) //rgba
+        gl.clear(gl.COLOR_BUFFER_BIT) //清空颜色
+        let size = 10.0;
+        function render() {
+            gl.clear(gl.COLOR_BUFFER_BIT)
+            let sizeInfo = gl.getAttribLocation(gl.program, 'a_size')
+            let positionInfo = gl.getAttribLocation(gl.program, 'a_position')
+            let colorInfo = gl.getAttribLocation(gl.program, 'a_color')
+            particles.forEach(item => {
+                gl.vertexAttrib2f(positionInfo, item.x, item.y)
+                gl.vertexAttrib1f(sizeInfo, size)
+                gl.vertexAttrib4f(colorInfo, item.c.r, item.c.g, item.c.b, item.c.a)
+                gl.drawArrays(gl.POINTS, 0, 1)
+            })
+        }
+    </script>
+</body>
+
+</html>

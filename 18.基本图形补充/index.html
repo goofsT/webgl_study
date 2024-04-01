@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        canvas {
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas" width="600" height="600"></canvas>
+    <script id="vertextShader" type="x-shader/x-vertex">
+        attribute vec2 a_position;
+        attribute vec3 a_color;
+        varying vec3 u_color;
+        void main(){
+            gl_Position=vec4(a_position,0.0,1.0);
+            u_color=a_color;
+        }
+    </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        precision mediump float;
+        varying vec3 u_color;
+        void main(){
+            gl_FragColor=vec4(u_color,1.0);
+        }
+    </script>
+    <script type="module">
+        /*
+            gl.draArrays(mode,first,count)
+            mode：绘制类型
+                    gl.POINTS：绘制点
+                    gl.LINE_STRIP：绘制线段 【前后线段相连，首尾不相连】
+                    gl.LINE_LOOP：绘制线环  【前后线段相连，且首尾相连】
+                    gl.LINES：绘制线段  【两个点一组】
+                    gl.TRIANGLE_STRIP： 绘制三角带
+                                        顶点数组【A,B,C,D,E】
+                                        绘制三角形【ABC,BCD,CDE】  
+                                        这样使得相邻三角形共享一个边，节省了顶点数据
+                    gl.TRIANGLE_FAN：  绘制三角形扇形
+                                       以第一个顶点为中心 
+                                       顶点数组【A,B,C,D,E】
+                                       绘制三角形扇形【ABC,ACD,ADE】  
+                    gl.TRIANGLES：绘制三角形 【单独三角形】
+                    补充：对于面的绘制来说，面向我们的面如果是正面，则是逆时针绘制
+                                          面向我们的面如果是反面，则是顺时针绘制  
+            first：从第几个开始
+            count：绘制几个
+        */
+        import { initShaders, Compose, Track } from '../util.js'
+        const canvas = document.getElementById("canvas")
+        let gl = canvas.getContext("webgl")
+        initShaders(gl, document.getElementById('vertextShader').textContent, document.getElementById('fragmentShader').textContent)
+        gl.clearColor(0, 0, 0, 0) //透明底色 方便看到背景图
+        gl.clear(gl.COLOR_BUFFER_BIT) //清空颜色
+        /**
+         * 绘制三角形
+         **/
+        let particles = [
+            -0.5, 0.3, 1, 0, 0,
+            0.2, 0.3, 1, 0, 0,
+            0, 0.5, 1, 0, 0
+        ]
+        let vertices = new Float32Array(particles)
+        const FSIZE = vertices.BYTES_PER_ELEMENT
+        let buffer = gl.createBuffer()
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
+        let positionInfo = gl.getAttribLocation(gl.program, 'a_position')
+        let colorInfo = gl.getAttribLocation(gl.program, 'a_color')
+        gl.vertexAttribPointer(
+            positionInfo,
+            2,
+            gl.FLOAT,
+            false,
+            5 * FSIZE,
+            0
+        )
+        gl.vertexAttribPointer(
+            colorInfo,
+            3,
+            gl.FLOAT,
+            false,
+            5 * FSIZE,
+            2 * FSIZE
+        )
+        gl.enableVertexAttribArray(positionInfo)
+        gl.enableVertexAttribArray(colorInfo)
+        gl.drawArrays(gl.TRIANGLES, 0, 3)
+        /**
+         * 绘制线段
+         **/
+        particles = [
+            1.0, 0.0,
+            -1.0, 0.0,
+        ]
+        vertices = new Float32Array(particles)
+        buffer = gl.createBuffer()
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
+        gl.vertexAttribPointer(
+            positionInfo,
+            2,
+            gl.FLOAT,
+            false,
+            2 * FSIZE,
+            0
+        )
+        gl.enableVertexAttribArray(positionInfo)
+        gl.drawArrays(gl.LINES, 0, 2)
+
+        /**
+         * 绘制矩形面 两个三角面去组成
+         **/
+        particles = [
+            -0.5, 0.0, 0.0, 1.0, 0.0,
+            -0.5, -0.5, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0, 0.0,
+            0.0, -0.5, 0.0, 1.0, 0.0,
+        ]
+        vertices = new Float32Array(particles)
+        buffer = gl.createBuffer()
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
+        gl.vertexAttribPointer(
+            positionInfo,//属性名
+            2,//每个顶点占用的个数
+            gl.FLOAT,//浮点数格式
+            false,//不需要归一化
+            5 * FSIZE,//步幅
+            0 //偏移量  从第几个开始
+        )
+        gl.vertexAttribPointer(
+            colorInfo,//属性名
+            3,//每个顶点占用的个数
+            gl.FLOAT,//浮点数格式
+            false,//不需要归一化
+            5 * FSIZE,
+            2 * FSIZE  //因为位置数据占了2个位置，所以需要偏移
+        )
+        gl.enableVertexAttribArray(colorInfo)
+        gl.enableVertexAttribArray(positionInfo)
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+
+
+
+
+
+
+
+    </script>
+</body>
+
+</html>
