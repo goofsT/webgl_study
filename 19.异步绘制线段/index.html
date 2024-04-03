@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        canvas {
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas" width="600" height="600"></canvas>
+    <script id="vertextShader" type="x-shader/x-vertex">
+        attribute vec4 a_position;
+        void main(){
+            gl_Position=a_position;
+            gl_PointSize=20.0;
+        }
+    </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        precision mediump float;
+        void main(){
+            gl_FragColor=vec4(1,1,0,1);
+        }
+    </script>
+    <script type="module">
+        import { initShaders, Poly } from '../util.js'
+        const canvas = document.getElementById("canvas")
+        let gl = canvas.getContext("webgl")
+        initShaders(gl, document.getElementById('vertextShader').textContent, document.getElementById('fragmentShader').textContent)
+        gl.clearColor(0, 0, 0, 1) //透明底色 方便看到背景图
+        gl.clear(gl.COLOR_BUFFER_BIT) //清空颜色
+        /**
+         * 以下绘图原理：
+         * 缓冲区被绑定在webgl上下文对象后，通过异步方法修改缓冲区数据，顶点着色器自动调用其数据
+         */
+
+        // let points = [0, 0.2]
+        // const pointsBuffer = gl.createBuffer()
+        // gl.bindBuffer(gl.ARRAY_BUFFER, pointsBuffer)//绑定缓冲区
+        // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW)
+        // const a_poisition = gl.getAttribLocation(gl.program, 'a_position')
+        // gl.vertexAttribPointer(a_poisition, 2, gl.FLOAT, false, 0, 0)
+        // gl.enableVertexAttribArray(a_poisition)//启用批处理
+
+        // gl.drawArrays(gl.POINTS, 0, points.length / 2)
+
+        // setTimeout(() => {
+        //     points.push(-0.2, -0.1)
+        //     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW)
+        //     gl.clear(gl.COLOR_BUFFER_BIT)
+        //     gl.drawArrays(gl.POINTS, 0, points.length / 2)
+        // }, 1000)
+
+        // setTimeout(() => {
+        //     gl.clear(gl.COLOR_BUFFER_BIT)
+        //     gl.drawArrays(gl.POINTS, 0, points.length / 2)
+        //     gl.drawArrays(gl.LINE_STRIP, 0, points.length / 2)
+        // }, 2000)
+
+
+        //使用封装结构绘制
+        const poly = new Poly({
+            gl,
+            vertices: [0, 0.2]
+        })
+        poly.draw(['POINTS'])
+        setTimeout(() => {
+            poly.addVertice(-0.2, -0.1)
+            gl.clear(gl.COLOR_BUFFER_BIT) //清空颜色
+            poly.draw()
+        }, 1000)
+
+        setTimeout(() => {
+            poly.addVertice(-0.2, -0.1)
+            gl.clear(gl.COLOR_BUFFER_BIT) //清空颜色
+            poly.draw(['POINTS', 'LINE_STRIP'])
+        }, 2000)
+
+
+
+
+
+
+
+
+
+
+
+
+    </script>
+</body>
+
+</html>

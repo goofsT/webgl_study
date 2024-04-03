@@ -122,11 +122,28 @@
         /**
          * 绘制矩形面 两个三角面去组成
          **/
+        //三角带
         particles = [
             -0.5, 0.0, 0.0, 1.0, 0.0,
             -0.5, -0.5, 0.0, 1.0, 0.0,
             0.0, 0.0, 0.0, 1.0, 0.0,
             0.0, -0.5, 0.0, 1.0, 0.0,
+        ]
+        //三角扇
+        particles = [
+            0, -0.5, 0.0, 1.0, 0.0,
+            0.5, -0.5, 0.0, 1.0, 0.0,
+            0.5, 0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0, 0.0,
+        ]
+        //独立三角
+        particles = [
+            0.0, 0.0, 0.0, 0.0, 1.0,
+            0, -0.5, 0.0, 0.0, 1.0,
+            0.5, 0, 0.0, 0.0, 1.0,
+            0.5, 0.0, 0.0, 0.0, 1.0,
+            0, -0.5, 0.0, 0.0, 1.0,
+            0.5, -0.5, 0.0, 0.0, 1.0
         ]
         vertices = new Float32Array(particles)
         buffer = gl.createBuffer()
@@ -150,7 +167,9 @@
         )
         gl.enableVertexAttribArray(colorInfo)
         gl.enableVertexAttribArray(positionInfo)
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        // gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)//绘制三角带
+        // gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)//绘制三角扇形
+        gl.drawArrays(gl.TRIANGLES, 0, 6)//绘制独立三角
 
 
 

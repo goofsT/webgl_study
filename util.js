@@ -142,3 +142,97 @@ export class Track {
         }
     }
 }
+
+
+/**
+ * 绘制辅助类
+ * @returns 
+ */
+//使用函数解决引用循环问题
+const defAttr = () => ({
+    gl: null,//gl上下文对象
+    vertices: [],//顶点数据
+    geoData: [],//模型数据，对象数组，可解析出顶点数据
+    size: 2,//顶点分量数
+    attrName: 'a_position',//顶点位置attribute名称
+    count: 0,//顶点数量
+    types: ['POINTS'],//绘图方式
+
+})
+//绘制对象
+export class Poly {
+    constructor(attr) {
+        Object.assign(this, defAttr(), attr);
+        this.init()
+    }
+    init() {
+        const { attrName, size, gl, vertices } = this
+        if (!gl) return;
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+        this.updateBuffer()
+        const a_Position = gl.getAttribLocation(gl.program, attrName)
+        gl.vertexAttribPointer(a_Position, size, gl.FLOAT, false, 0, 0)
+        gl.enableVertexAttribArray(a_Position)
+    }
+    updateBuffer() {
+        const { gl, vertices } = this
+        this.updateCount()
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    }
+    updateCount() {
+        this.count = this.vertices.length / this.size
+    }
+    addVertice(...params) {
+        this.vertices.push(...params)
+        this.updateBuffer()
+    }
+    popVertice() {
+        this.vertices.pop()
+        this.updateCount()
+    }
+    setVertices(idx, ...params) {
+        this.vertices.splice(idx * this.size, this.size, ...params)
+    }
+    //基于geoData解析顶点数据
+    updateVertices(params) {
+        const vertices = []
+        this.geoData.forEach(data => {
+            params.forEach(param => {
+                vertices.push(data[param])
+            })
+        })
+        this.vertices = vertices
+    }
+    draw(types = this.types) {
+        const { gl, count } = this;
+        for (let type of types) {
+            gl.drawArrays(gl[type], 0, count)
+        }
+    }
+}
+
+//容器对象 用于存储多个Poly
+export class Sky {
+    constructor(gl) {
+        this.gl = gl;
+        this.children = []
+    }
+    add(obj) {
+        obj.gl = this.gl
+        this.children.push(obj)
+    }
+    updateVertices(params) {
+        this.children.forEach(child => {
+            child.updateVertices(params)
+        })
+    }
+    draw() {
+        this.children.forEach(child => {
+            child.init()
+            child.draw()
+        })
+    }
+}

@@ -45,24 +45,24 @@
         let sx = 1, sy = 1, sz = 1//x,y,z方向的缩放值
         let tx = 0, ty = 0, tz = 0//x,y,z方向的平移值
         let deg = 0//旋转角度(绕z轴)
-        let speedX=1
-        let speedY=1
+        let speedX = 1
+        let speedY = 1
         let translateMatrix, scaleMatrix, rotateMatrix
 
         render()
         function render() {
-            deg+=1
-            tx+=0.01*speedX
-            ty+=0.01*speedY
-            if(tx>=0.5||tx<=-0.5){
-                speedX*=-1
+            deg += 1
+            tx += 0.01 * speedX
+            ty += 0.01 * speedY
+            if (tx >= 0.5 || tx <= -0.5) {
+                speedX *= -1
             }
-            if(ty>=0.5||ty<=-0.5){
-                speedY*=-1
+            if (ty >= 0.5 || ty <= -0.5) {
+                speedY *= -1
             }
-            // sx+=0.01
-            // sy-=0.01
-            
+            // sx += 0.01
+            // sy -= 0.01
+
             animate()
             draw()
             requestAnimationFrame(render)
@@ -84,10 +84,17 @@
                 0, 0, 0, 1
             ]
             //旋转(绕z轴)
+            // rotateMatrix = [
+            //     Math.cos(deg / 180 * Math.PI), Math.sin(deg / 180 * Math.PI), 0, 0,
+            //     -Math.sin(deg / 180 * Math.PI), Math.cos(deg / 180 * Math.PI), 0, 0,
+            //     0, 0, 1, 0,
+            //     0, 0, 0, 1
+            // ]
+            //旋转(绕X轴)
             rotateMatrix = [
-                Math.cos(deg / 180 * Math.PI), Math.sin(deg / 180 * Math.PI), 0, 0,
-                -Math.sin(deg / 180 * Math.PI), Math.cos(deg / 180 * Math.PI), 0, 0,
-                0, 0, 1, 0,
+                1, 0, 0, 0,
+                0, Math.cos(deg / 180 * Math.PI), Math.sin(deg / 180 * Math.PI), 0,
+                0, -Math.sin(deg / 180 * Math.PI), Math.cos(deg / 180 * Math.PI), 0,
                 0, 0, 0, 1
             ]
             let u_scale_matrix = gl.getUniformLocation(gl.program, 'u_scale_matrix')

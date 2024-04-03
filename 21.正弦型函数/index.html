@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="container" width="800" height="600"></canvas>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.0/tween.umd.js"></script>
+
+    <script type="module">
+        /**
+         正弦型函数性质：y=Asin(Bx+C)
+         A:影响正弦曲线波动幅度
+         B:影响正弦曲线周期
+         C:影响正弦曲线偏移
+        */
+        import { initShader } from '../initShaders.js'
+        import { mat4, glMatrix } from '../glMatrix/esm/index.js'
+        const canvas = document.getElementById('container')
+        const gl = canvas.getContext('webgl')
+        let vertexShader = `
+        attribute vec3 a_position;
+        attribute vec4 a_color;
+        uniform mat4 u_viewMatrix;
+        varying vec4 v_color;
+        void main(){
+            gl_Position=u_viewMatrix * vec4(a_position,1.0);
+            v_color=a_color;
+            gl_PointSize=3.0;
+        }
+        `
+        let fragmentShader = `
+        precision mediump float;
+        varying vec4 v_color;
+        void main(){
+            float d=distance(gl_PointCoord,vec2(0.5,0.5));
+            if(d>0.5){
+                discard;
+            }else{
+                gl_FragColor=v_color;
+            }
+        }
+        `
+        let viewMatrix, vertices, tween
+        initShader(gl, vertexShader, fragmentShader)
+        initMatrixs()
+        initVertexBuffer()
+        render()
+
+        function initMatrixs() {
+            //视图矩阵
+            viewMatrix = mat4.create()
+            const eye = [0.2, 0.2, 0.5] //相机位置
+            const target = [0, 0, 0] //目标位置
+            const up = [0, 1, 0] //法向
+            viewMatrix = mat4.lookAt(viewMatrix, eye, target, up)
+            let viewMatrixInfo = gl.getUniformLocation(gl.program, 'u_viewMatrix')
+            gl.uniformMatrix4fv(viewMatrixInfo, false, viewMatrix)
+        }
+
+        function initVertexBuffer() {
+            vertices = []
+            const [minPosX, maxPosX, minPosZ, maxPosZ] = [-0.5, 0.5, -1, 1]
+            for (let i = minPosZ; i < maxPosZ; i += 0.04) {
+                for (let j = minPosX; j < maxPosX; j += 0.03) {
+                    vertices.push(
+                        j, 0, i,
+                        0.0, 0.0, 1.0, 1)
+                }
+            }
+            let FSIZE = new Float32Array(vertices).BYTES_PER_ELEMENT
+            console.log(FSIZE);
+            let buffer = gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW)
+            let a_position = gl.getAttribLocation(gl.program, 'a_position')
+            let a_color = gl.getAttribLocation(gl.program, 'a_color')
+            gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, FSIZE * 7, 0)
+            gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 7, FSIZE * 3)
+            gl.enableVertexAttribArray(a_position)
+            gl.enableVertexAttribArray(a_color)
+        }
+
+
+        function draw() {
+            gl.clearColor(0.0, 0.0, 0.0, 1.0)
+            gl.clear(gl.COLOR_BUFFER_BIT)
+            gl.drawArrays(gl.POINTS, 0, vertices.length)
+        }
+
+        function render(time) {
+            tween && tween.update(time)
+            vertices = []
+            let color = 0
+            const [minPosX, maxPosX, minPosZ, maxPosZ] = [-0.5, 0.5, -1, 1]
+            for (let i = minPosZ; i < maxPosZ; i += 0.04) {
+                for (let j = minPosX; j < maxPosX; j += 0.03) {
+                    //根据time计算正弦函数相位
+                    const posY = Math.sin((j + time * 0.0005) * 10) * 0.05; // 调整振幅和频率以满足您的需求
+                    vertices.push(j, posY, i, posY * 10, 0.0, 1.0, posY * 10);
+                }
+            }
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW)
+            draw()
+            requestAnimationFrame(render)
+        }
+
+
+
+
+    </script>
+</body>
+
+</html>
