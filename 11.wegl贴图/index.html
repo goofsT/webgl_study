@@ -20,6 +20,10 @@
         import { mat4, glMatrix } from '../glMatrix/esm/index.js'
         const canvas = document.getElementById('container')
         const gl = canvas.getContext('webgl')
+        /**
+         * 栅格坐标系：与canvas2D坐标系相同
+         * uv坐标系:坐标系原点在图像左下角，u轴在右，v轴在上，分别代表一个图像宽度和高度
+         */
         let vertexShader = `
         attribute vec3 a_position;
         attribute vec2 a_uv;
@@ -45,94 +49,75 @@
         initVertexBuffer()
         initTextures()
 
-
-
         function initVertexBuffer() {
             //四个顶点坐标信息
-            
             let vertices = new Float32Array([
-                -0.5, -0.5, 0.0,   0.0, 0.0,
-                0.5, -0.5, 0.0,    3.0, 0.0,
-                0.5, 0.5, 0.0,     3.0, 3.0,
-                -0.5, 0.5, 0.0,    0.0,3.0
+                -0.5, -0.5, 0.0, 0.0, 0.0,
+                0.5, -0.5, 0.0, 4.0, 0.0,
+                0.5, 0.5, 0.0, 4.0, 4.0,
+                -0.5, 0.5, 0.0, 0.0, 4.0
             ])
 
-            /*
-            贴图与形状四个顶点相对应
-            let vertices = new Float32Array([
-                -0.5, -0.5, 0.0,   0.0, 0.0,
-                0.5, -0.5, 0.0,    1.0, 0.0,
-                0.5, 0.5, 0.0,     1.0, 1.0,
-                -0.5, 0.5, 0.0,    0.0,1.0
-            ])
-            */
-            
+
+            //贴图与形状四个顶点相对应
+            //通过改变贴图坐标，可以得到不同的效果
+            // vertices = new Float32Array([
+            //     -0.5, -0.5, 0.0, 0.0, 0.0,
+            //     0.5, -0.5, 0.0, 1.0, 0.0,
+            //     0.5, 0.5, 0.0, 1.0, 1.0,
+            //     -0.5, 0.5, 0.0, 0.0, 1.0
+            // ])
+
 
             let FSIZE = vertices.BYTES_PER_ELEMENT
             let buffer = gl.createBuffer()
-            if(!buffer) console.log('创建buffer失败');
             gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
             gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
 
             let a_uv = gl.getAttribLocation(gl.program, 'a_uv')
-            gl.vertexAttribPointer(a_uv,2,gl.FLOAT,false, FSIZE * 5, FSIZE * 3)
+            gl.vertexAttribPointer(a_uv, 2, gl.FLOAT, false, FSIZE * 5, FSIZE * 3)
             gl.enableVertexAttribArray(a_uv)
 
             let a_position = gl.getAttribLocation(gl.program, 'a_position')
-            gl.vertexAttribPointer(a_position,3, gl.FLOAT, false, FSIZE * 5, 0)
+            gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, FSIZE * 5, 0)
             gl.enableVertexAttribArray(a_position)
 
         }
 
-
         function initTextures() {
-
             let texture = gl.createTexture()
             let u_texture = gl.getUniformLocation(gl.program, 'u_texture');
             let image = new Image();
-            image.crossOrigin=""//解决跨域
+            image.crossOrigin = ""//解决跨域
             image.src = './test.jpg';
             image.onload = function () {
-                //翻转y
-                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true)
-                gl.activeTexture(gl.TEXTURE0)
+                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)//翻转y  因为贴图坐标y轴方向向上，而canvas坐标系y轴方向向下
+                gl.activeTexture(gl.TEXTURE0)//激活纹理单元 一般最多8个单元
                 gl.bindTexture(gl.TEXTURE_2D, texture)
-
-
-
-                /*问题出在纹理参数的设置上。
-                  webgl默认图像源的尺寸为2的n次幂，
-                 比如宽为256、高为256的图像可以正常显示
-                 但宽为256、高为300的图像不能正常显示。
-                 解决：gl.CLAMP_TO_EDGE
-                t
-
-
-                         s
-
-                gl.REPEAT:x/y 平铺
+                /*
+                texParameteri对贴图参数进行设置： 贴图类型 参数名称  参数值
+                
+                gl.REPEAT:x/y 平铺 (默认)
                 gl.CLAMP_TO_EDGE:x/y最外侧像素延伸
                 gl.MIRRORED_REPEAT :x/y方向镜像平铺
+
+                问题：图片大小不为2的n次方时，会导致图片无法显示，上述CLAMP_TO_EDGE可以解决
                 */
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-
-
-               
+                // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);//水平方向
+                // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);//垂直方向
                 /*
                 小图贴到大的形状上：gl.TEXTURE_MAG_FILTER
                 大图贴到小的形状上：gl.TEXTURE_MIN_FILTER
                 gl.LINEAR 线性 效果较好
                 gl.NEAREST 取最近  处理较快
                 */
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+                //纹理类型 基本图像登记  纹理颜色组件 纹理数据格式必须和颜色组件相同 纹理数据类型  图像源
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
-                gl.uniform1i(u_texture,0);
+                gl.uniform1i(u_texture, 0);//0代表0号单元
                 draw();
             }
-
         }
-
 
         function draw() {
             gl.clearColor(0.5, 0.5, 0.5, 1.0)

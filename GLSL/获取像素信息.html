@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        canvas {
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas" width="800" height="800"></canvas>
+
+    <script id="vs" type="x-shader/x-vertex">
+        attribute vec3 a_position;
+        void main(){
+            gl_Position = vec4(0,0,0,1);
+            gl_PointSize=520.0;
+        }
+    </script>
+    <script id="fs" type="x-shader/x-fragment">
+        precision mediump float;
+        vec4 v=vec4(1,2,3,4)+vec4(5,6,7,8);
+        mat4 m=mat4(
+            255, 0, 0, 255,
+            0, 255, 0, 255,
+            0, 0, 255, 255,
+            255, 255,0, 255
+        );
+        void main(){
+            //gl_FragColor=v/255.0;
+            float d=distance(gl_PointCoord,vec2(0.5,0.5));
+            if(d>=0.0&&d<0.125){
+                gl_FragColor=m[0]/255.0;
+            }else if(d>=0.125&&d<0.25){
+                gl_FragColor=m[1]/255.0;
+            }else if(d>=0.25&&d<0.375){
+                gl_FragColor=m[2]/255.0;
+            }else if(d>=0.375&&d<0.5){
+                gl_FragColor=m[3]/255.0;
+            }else {
+                discard;
+            }
+        }
+    </script>
+    <script type="module">
+        import { initShaders } from '../util.js';
+        const canvas = document.getElementById('canvas');
+        const gl = canvas.getContext('webgl');
+        gl.clearColor(0.0, 0.0, 0.0, 1.0)
+        const point = [0, 0, 0]
+        const vs = document.getElementById('vs').textContent;
+        const fs = document.getElementById('fs').textContent;
+        initShaders(gl, vs, fs);
+        const a_position = gl.getAttribLocation(gl.program, 'a_position');
+        gl.vertexAttrib3f(a_position, point[0], point[1], point[2])
+        gl.clear(gl.COLOR_BUFFER_BIT)
+        gl.drawArrays(gl.POINTS, 0, 1)
+
+        //像素容器(单个)
+        const pixel = new Uint8Array(4);//一个像素4个字节
+        logPixel()
+        //处理圆环 圆环最大半径为520/2 一共有四个圆环 所以520/2/4
+        const vw = 520 / 8 //每个圆环的宽度
+        for (let i = 0; i < 4; i++) {
+            logPixel(i * vw + vw / 2)
+        }
+        function logPixel(offset = 0) {
+            gl.readPixels(
+                canvas.width / 2 + offset, canvas.height / 2,//读取区域
+                1, 1,//宽度 高度
+                gl.RGBA,//颜色格式
+                gl.UNSIGNED_BYTE,//数据类型
+                pixel//容器
+            )
+            console.log(pixel);
+
+        }
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="container" width="800" height="800"></canvas>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.0/tween.umd.js"></script>
+    <script type="module">
+        import { initShader } from '../initShaders.js'
+        import { mat4, glMatrix, vec3 } from '../glMatrix/esm/index.js'
+        const canvas = document.getElementById('container')
+        const gl = canvas.getContext('webgl')
+        let vertexShader = `
+       attribute vec4 a_position;
+       uniform mat4 u_viewMatrix;
+       uniform mat4 u_modelMatrix;
+       uniform mat4 u_projMatrix;
+        void main(){
+            gl_Position=u_projMatrix*u_viewMatrix*u_modelMatrix*a_position;
+        }
+        `
+        let fragmentShader = `
+        precision mediump float;
+        void main(){
+           gl_FragColor=vec4(1.0,1.0,0.0,1.0);
+        }
+        `
+        let viewMatrix, modelMatrix, projMatrix, vertices, tween
+        let angle = 0;
+        //顶点坐标
+        const verticeLib = new Float32Array([
+            1.0, 1.0, 1.0,
+            -1.0, 1.0, 1.0,
+            -1.0, -1.0, 1.0,
+            1.0, -1.0, 1.0,
+            1.0, -1.0, -1.0,
+            1.0, 1.0, -1.0,
+            -1.0, 1.0, -1.0,
+            -1.0, -1.0, -1.0
+        ])
+        //顶点索引
+        const indices = new Uint8Array([
+            0, 1,
+            1, 2,
+            2, 3,
+            3, 0,
+
+            0, 5,
+            1, 6,
+            2, 7,
+            3, 4,
+
+            4, 5,
+            5, 6,
+            6, 7,
+            7, 4
+        ])
+        initShader(gl, vertexShader, fragmentShader)
+        initMatrixs()
+        initVertexBuffer()
+        render()
+
+        function initMatrixs() {
+            //视图矩阵
+            viewMatrix = mat4.create()
+            modelMatrix = mat4.create()
+            projMatrix = mat4.create()
+            const eye = [3, 3, 3] //相机位置
+            const target = [0, 0, 0] //目标位置
+            const up = [0, 1, 0] //法向
+            viewMatrix = mat4.lookAt(viewMatrix, eye, target, up)
+            mat4.scale(modelMatrix, modelMatrix, [0.5, 0.5, 0.5])
+            mat4.perspective(projMatrix, Math.PI / 4, 1, 0.5, 10);
+            let viewMatrixInfo = gl.getUniformLocation(gl.program, 'u_viewMatrix')
+            let modelMatrixInfo = gl.getUniformLocation(gl.program, 'u_modelMatrix')
+            let perspectiveInfo = gl.getUniformLocation(gl.program, 'u_projMatrix')
+            gl.uniformMatrix4fv(modelMatrixInfo, false, modelMatrix)
+            gl.uniformMatrix4fv(viewMatrixInfo, false, viewMatrix)
+            gl.uniformMatrix4fv(perspectiveInfo, false, projMatrix)
+
+            const indicesBuffer = gl.createBuffer()
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW)
+        }
+
+        function initVertexBuffer() {
+            const vertexBuffer = gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer)
+            gl.bufferData(gl.ARRAY_BUFFER, verticeLib, gl.STATIC_DRAW)
+            const a_position = gl.getAttribLocation(gl.program, 'a_position')
+            gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, 0, 0)
+            gl.enableVertexAttribArray(a_position)
+
+
+
+        }
+
+
+        function draw() {
+            gl.clearColor(0.0, 0.0, 0.0, 1.0)
+            gl.clear(gl.COLOR_BUFFER_BIT)
+            //使用索引绘制
+            //参数：绘图方式 元素数量 缓冲区数据类型 当前系列字节索引位置
+            gl.drawElements(gl.LINES, indices.length, gl.UNSIGNED_BYTE, 0)
+        }
+
+        function render(time) {
+            angle = 0.001
+            mat4.rotate(modelMatrix, modelMatrix, angle, [0, 1, 0])
+            gl.bufferData(gl.ARRAY_BUFFER, verticeLib, gl.STATIC_DRAW)
+            let modelMatrixInfo = gl.getUniformLocation(gl.program, 'u_modelMatrix')
+            gl.uniformMatrix4fv(modelMatrixInfo, false, modelMatrix)
+            draw()
+            requestAnimationFrame(render)
+        }
+
+
+
+
+    </script>
+</body>
+
+</html>

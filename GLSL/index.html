@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        canvas {
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas" width="800" height="800"></canvas>
+
+    <script type="module">
+        /**
+         * GLSL:
+            1.基本数据类型:int float bool
+            2.强类型语言:声明变量时需要指定类型
+            3.命名规范：只能包括a-zA-Z0-9_
+                        1.不能以数字开头
+                        2.不能是关键字或保留字 如attribute,cast,class
+                        3.不能以gl_,webgl_,等开头
+            4.变量赋值：= 赋值  且左右数据类型必须一致（比较时也需要）
+            5.类型转换: 浮点转整型:int(float) 
+                        浮点转布尔型:bool(float)
+                        整型转布尔型:bool(int)
+                        整型转浮点型:float(int)
+                        布尔转浮点型:float(bool)
+                        布尔转整型:int(bool)
+            6.向量类型：vec2,vec3,vec4  浮点型分量
+                        ivec2,ivec3,ivec4 整型分量
+                        bvec2,bvec3,bvec4 布尔型分量
+            7.矩阵类型：mat2,mat3,mat4 均为浮点型  
+                       mat2 m=mat2(
+                        1,2,
+                       3,4) 
+                       读取时如mat2[0] 为矩阵第一列元素,但在写法上实际读取的为矩阵第一行元素 即:vec2(1,2)
+                       可以使用m[y][k] 读取第y行第k列元素 如m[0][1]=2
+                       []中的索引只能通过const修饰的变量(const int y=0)或者整形字面量（1,2...)
+            8.结构体struct：
+                        创建:struct Light{
+                            vec4 color;
+                            vec3 position;
+                        }
+                        实例化:Light l1=Light(vec4(1,1,1,1),vec3(1,1,1));
+                        访问:l1.color
+            8.数组： 只支持一维数组
+                        创建：
+                         int a[10];数组长度为10且类型为int
+            9.函数：
+                        创建：
+                            int add(int a,int b){
+                                return a+b;
+                            }
+            10.参数限定词:in：用于表示从顶点着色器接收数据的变量。
+                          out：表示顶点着色器向片元着色器输出数据的变量。
+                          inout：这个限定词表示变量既是输入也是输出。这在函数参数中使用比较常见。
+                          const：表示变量的值是常量，不能被修改。
+                          uniform：表示变量是统一的，即在一次绘制调用中，所有的顶点和片元都看到的是同一个值。
+                          varying：用于从顶点着色器向片元着色器传递插值后的数据，2.0版本中,被in  out取代
+                          attribute：用于表示从 JavaScript 程序接收数据的变量。2.0版本中被in取代
+            11.精度限定词：lowp：低精度，精度为 16 位。
+                            mediump：中精度，精度为 16 位。
+                            highp：高精度，精度为 32 位。
+                            默认精度为 highp。
+
+      
+
+
+                       
+
+
+        */
+
+
+    </script>
+</body>
+
+</html>
