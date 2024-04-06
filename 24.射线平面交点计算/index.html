@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.bootcdn.net/ajax/libs/three.js/0.156.1/three.min.js"></script>
+    <title>Document</title>
+</head>
+
+<body>
+    <script>
+        /**
+         * 求视点到鼠标位置三角形平面交点
+         * 三角形为ABC
+         * */
+        const A = new THREE.Vector3(-6, 9, -4)
+        const B = new THREE.Vector3(0, 9, 4)
+        const C = new THREE.Vector3(6, 9, -4)
+        //视点:
+        const E = new THREE.Vector3(0, 12, 16)
+        //鼠标点
+        const P = new THREE.Vector3(0, 3, 4)
+
+        //求三角形法线 
+        //原理 计算两个向量的叉乘得到的向量垂直于三角形所在的平面
+        const AB = new THREE.Vector3().subVectors(B, A)
+        const BC = new THREE.Vector3().subVectors(C, B)
+        const n = new THREE.Vector3().crossVectors(AB, BC).normalize()//单位化
+        //计算射线(视点到鼠标点)
+        const v = new THREE.Vector3().subVectors(P, E).normalize()
+        //求射线与三角形所在平面的交点
+        //公式： M=((A-E)·n/v·n)*v+E
+        let t = ((A.clone().sub(E)).dot(n)) / (v.clone().dot(n));
+        const M = v.clone().multiplyScalar(t).add(E);
+        console.log(M);//(0,9,12)
+
+        /**
+         * Threejs测试
+         * */
+        const plane = new THREE.Plane().setFromCoplanarPoints(A, B, C)//基于不共线三点
+        const v1 = new THREE.Vector3().subVectors(P, E).normalize()
+        const ray = new THREE.Ray(E, v1)
+        const M1 = new THREE.Vector3()
+        ray.intersectPlane(plane, M1)
+        console.log(M1)//(0,9,12)
+
+    </script>
+</body>
+
+</html>

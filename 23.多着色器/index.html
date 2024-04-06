@@ -14,117 +14,167 @@
 </head>
 
 <body>
-    <canvas id="container" width="800" height="800"></canvas>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.0/tween.umd.js"></script>
+    <canvas id="container" width="400" height="400"></canvas>
+    <!-- 纹理 -->
+    <script id="veShader1" type="x-shader/x-vertex">
+        attribute vec4 a_position;
+        attribute vec2 a_uv;
+        varying vec2 v_uv;
+        void main(){
+            gl_Position=a_position;
+            v_uv=a_uv;
+        }
+    </script>
+    <script id="frShader1" type="x-shader/x-fragment">
+        precision mediump float;
+        varying vec2 v_uv;
+        uniform sampler2D u_texture;
+        void main(){
+            vec4 color=texture2D(u_texture,v_uv);
+            gl_FragColor=color;
+        }
+    </script>
+    <!-- 纯色 -->
+    <script id="veShader2" type="x-shader/x-vertex">
+        attribute vec3 a_position;
+        void main(){
+            gl_Position=vec4(a_position,1.0);
+        }
+    </script>
+    <script id="frShader2" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform float u_time;
+        void main(){
+            float r=(sin(u_time/200.0)+1.0)/2.0;
+            gl_FragColor=vec4(r,0.7,0.4,1);
+        }
+    </script>
+
     <script type="module">
-        import { initShader } from '../initShaders.js'
-        import { mat4, glMatrix, vec3 } from '../glMatrix/esm/index.js'
+        import { mat4, glMatrix } from '../glMatrix/esm/index.js'
         const canvas = document.getElementById('container')
         const gl = canvas.getContext('webgl')
-        let vertexShader = `
-       attribute vec4 a_position;
-       uniform mat4 u_viewMatrix;
-       uniform mat4 u_modelMatrix;
-       uniform mat4 u_projMatrix;
-        void main(){
-            gl_Position=u_projMatrix*u_viewMatrix*u_modelMatrix*a_position;
+        gl.enable(gl.DEPTH_TEST);
+        const programTexture = initShaders(gl, document.getElementById('veShader1').innerText, document.getElementById('frShader1').innerText)
+        const programColor = initShaders(gl, document.getElementById('veShader2').innerText, document.getElementById('frShader2').innerText)
+        initTextures()
+
+        function initTextures() {
+            gl.useProgram(programTexture)
+            let texture = gl.createTexture()
+            let u_texture = gl.getUniformLocation(programTexture, 'u_texture');
+            let image = new Image();
+            image.crossOrigin = ""//解决跨域
+            image.src = './test.jpg';
+            image.onload = function () {
+
+                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)//翻转y  因为贴图坐标y轴方向向上，而canvas坐标系y轴方向向下
+                gl.activeTexture(gl.TEXTURE0)//激活纹理单元 一般最多8个单元
+                gl.bindTexture(gl.TEXTURE_2D, texture)
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+                gl.uniform1i(u_texture, 0);//0代表0号单元
+                drawRect();
+                drawTrangle()
+                render()
+            }
         }
-        `
-        let fragmentShader = `
-        precision mediump float;
-        void main(){
-           gl_FragColor=vec4(1.0,1.0,0.0,1.0);
-        }
-        `
-        let viewMatrix, modelMatrix, projMatrix, vertices, tween
-        let angle = 0;
-        //顶点坐标
-        const verticeLib = new Float32Array([
-            1.0, 1.0, 1.0,
-            -1.0, 1.0, 1.0,
-            -1.0, -1.0, 1.0,
-            1.0, -1.0, 1.0,
-            1.0, -1.0, -1.0,
-            1.0, 1.0, -1.0,
-            -1.0, 1.0, -1.0,
-            -1.0, -1.0, -1.0
-        ])
-        //顶点索引
-        const indices = new Uint8Array([
-            0, 1,
-            1, 2,
-            2, 3,
-            3, 0,
+        //绘制三角形
+        function drawRect() {
+            gl.useProgram(programTexture);
+            //四个顶点坐标信息
+            let vertices = new Float32Array([
+                0.2, -0.5, 0.0, 0.0, 0.0,
+                0.5, -0.5, 0.0, 1.0, 0.0,
+                0.5, 0.2, 0.0, 1.0, 1.0,
+                0.2, 0.2, 0.0, 0.0, 1.0
+            ])
+            let FSIZE = vertices.BYTES_PER_ELEMENT
+            let buffer = gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
 
-            0, 5,
-            1, 6,
-            2, 7,
-            3, 4,
+            let a_uv = gl.getAttribLocation(programTexture, 'a_uv')
+            gl.vertexAttribPointer(a_uv, 2, gl.FLOAT, false, FSIZE * 5, FSIZE * 3)
+            gl.enableVertexAttribArray(a_uv)
 
-            4, 5,
-            5, 6,
-            6, 7,
-            7, 4
-        ])
-        initShader(gl, vertexShader, fragmentShader)
-        initMatrixs()
-        initVertexBuffer()
-        render()
-
-        function initMatrixs() {
-            //视图矩阵
-            viewMatrix = mat4.create()
-            modelMatrix = mat4.create()
-            projMatrix = mat4.create()
-            const eye = [3, 3, 3] //相机位置
-            const target = [0, 0, 0] //目标位置
-            const up = [0, 1, 0] //法向
-            viewMatrix = mat4.lookAt(viewMatrix, eye, target, up)
-            mat4.scale(modelMatrix, modelMatrix, [0.5, 0.5, 0.5])
-            mat4.perspective(projMatrix, Math.PI / 4, 1, 0.5, 10);
-            let viewMatrixInfo = gl.getUniformLocation(gl.program, 'u_viewMatrix')
-            let modelMatrixInfo = gl.getUniformLocation(gl.program, 'u_modelMatrix')
-            let perspectiveInfo = gl.getUniformLocation(gl.program, 'u_projMatrix')
-            gl.uniformMatrix4fv(modelMatrixInfo, false, modelMatrix)
-            gl.uniformMatrix4fv(viewMatrixInfo, false, viewMatrix)
-            gl.uniformMatrix4fv(perspectiveInfo, false, projMatrix)
-
-            const indicesBuffer = gl.createBuffer()
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW)
-        }
-
-        function initVertexBuffer() {
-            const vertexBuffer = gl.createBuffer()
-            gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer)
-            gl.bufferData(gl.ARRAY_BUFFER, verticeLib, gl.STATIC_DRAW)
-            const a_position = gl.getAttribLocation(gl.program, 'a_position')
-            gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, 0, 0)
+            let a_position = gl.getAttribLocation(programTexture, 'a_position')
+            gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, FSIZE * 5, 0)
             gl.enableVertexAttribArray(a_position)
+            gl.clearColor(0.5, 0.5, 0.5, 1.0)
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-
-
+            gl.drawArrays(gl.TRIANGLE_FAN, 0, 4)
+        }
+        //绘制纹理矩形
+        function drawTrangle(time) {
+            gl.useProgram(programColor)
+            let vertices = new Float32Array([
+                -0.5, 0.5,
+                -0.5, -0.2,
+                0.2, -0.2
+            ])
+            let buffer1 = gl.createBuffer()
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer1)
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
+            let a_position = gl.getAttribLocation(programColor, 'a_position')
+            let u_time = gl.getUniformLocation(programColor, 'u_time')
+            gl.uniform1f(u_time, time)
+            gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0)
+            gl.enableVertexAttribArray(a_position)
+            gl.drawArrays(gl.TRIANGLES, 0, 3)
         }
 
-
-        function draw() {
-            gl.clearColor(0.0, 0.0, 0.0, 1.0)
-            gl.clear(gl.COLOR_BUFFER_BIT)
-            //使用索引绘制
-            //参数：绘图方式 元素数量 缓冲区数据类型 当前系列字节索引位置
-            gl.drawElements(gl.LINES, indices.length, gl.UNSIGNED_BYTE, 0)
-        }
 
         function render(time) {
-            angle = 0.001
-            mat4.rotate(modelMatrix, modelMatrix, angle, [0, 1, 0])
-            gl.bufferData(gl.ARRAY_BUFFER, verticeLib, gl.STATIC_DRAW)
-            let modelMatrixInfo = gl.getUniformLocation(gl.program, 'u_modelMatrix')
-            gl.uniformMatrix4fv(modelMatrixInfo, false, modelMatrix)
-            draw()
+            drawRect()
+            drawTrangle(time)
             requestAnimationFrame(render)
         }
 
+
+        function initShaders(gl, vsSource, fsSource) {
+            const program = gl.createProgram();//创建程序对象
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+            if (vertexShader && fragShader) {
+                //添加着色器
+                gl.attachShader(program, vertexShader);
+                gl.attachShader(program, fragShader);
+                gl.linkProgram(program);
+                let linked = gl.getProgramParameter(program, gl.LINK_STATUS)
+                if (linked) {
+                    return program;
+                } else {
+                    //链接时出错
+                    let error = gl.getProgramInfoLog(program)//获取错误信息
+                    console.log('link program error! ' + error);
+                    gl.deleteProgram(program)
+                    gl.deleteShader(FShader)
+                    gl.deleteShader(VShader)
+                    return null
+                }
+            } else {
+                return null
+            }
+
+        }
+
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            let compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS)
+            if (compiled) {
+                return shader
+            } else {
+                //编译时出错
+                let error = gl.getShaderInfoLog(shader)
+                console.log('compile shader error! ' + error);
+                gl.deleteShader(shader)
+                return null
+            }
+        }
 
 
 

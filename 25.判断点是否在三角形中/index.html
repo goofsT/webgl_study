@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.bootcdn.net/ajax/libs/three.js/0.156.1/three.min.js"></script>
+    <title>Document</title>
+</head>
+
+<body>
+    <script>
+        /**
+         * 二维平面中可用叉乘判断点是否在三角形中，三维也是如此
+         * 原理：利用向量的叉乘和点乘的性质。
+         * 向量的叉乘结果是一个新的向量，它垂直于原来的两个向量，
+         * 而点乘的结果可以判断两个向量之间的角度。
+         * 如果点 P 在三角形内部，那么它形成的三个向量 AP、BP 和 CP 应该在三角形的三个边的"内部"，
+         * 所以它们的叉乘向量应该都在同一方向。
+         * 
+         * 过程：
+         *      1.定你的三角形的三个顶点，记作 A、B 和 C，以及你想要检查的点，记作 P。
+         *      2.计算向量 AP = P - A，BP = P - B 和 CP = P - C
+         *      3.计算三个向量两两之间的叉乘：crossAB_AP = cross(AB, AP)，crossBC_BP = cross(BC, BP)，crossCA_CP = cross(CA, CP)。
+         *      4.计算这三个叉乘向量之间的点乘。如果点乘的结果都大于等于0，那么点 P 在三角形内部
+         * */
+        const A = new THREE.Vector3(-6, 0, -4)
+        const B = new THREE.Vector3(0, 0, 4)
+        const C = new THREE.Vector3(6, 0, -4)
+        //视点:
+        const E = new THREE.Vector3(0, 12, 16)
+        //鼠标点
+        const P = new THREE.Vector3(0, 3, 4)
+
+        //求三角形法线 
+        //原理 计算两个向量的叉乘得到的向量垂直于三角形所在的平面
+        const AB = new THREE.Vector3().subVectors(B, A)
+        const BC = new THREE.Vector3().subVectors(C, B)
+        const n = new THREE.Vector3().crossVectors(AB, BC).normalize()//单位化
+        //计算射线(视点到鼠标点)
+        const v = new THREE.Vector3().subVectors(P, E).normalize()
+        //求射线与三角形所在平面的交点
+        //公式： M=((A-E)·n/v·n)*v+E
+        let t = ((A.clone().sub(E)).dot(n)) / (v.clone().dot(n));
+        const M = v.clone().multiplyScalar(t).add(E);
+        console.log(M);//(0,0,0)
+
+        const triangle = [A, B, C]
+        console.log(intrangle(M, triangle))
+
+        function intrangle(M, triangle) {
+            let result = true
+            for (let i = 0; i < 3; i++) {
+                let j = (i + 1) % 3
+                const [a, b] = [triangle[i], triangle[j]]
+                const ma = a.clone().sub(M)
+                const ab = b.clone().sub(a)
+                //垂线
+                const d = ma.clone().cross(ab)
+                const len = d.dot(n)
+                if (len < 0) {
+                    result = false
+                    break
+                }
+            }
+            return result
+        }
+
+
+
+    </script>
+</body>
+
+</html>
