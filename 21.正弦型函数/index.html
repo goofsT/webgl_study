@@ -28,6 +28,13 @@
         import { mat4, glMatrix } from '../glMatrix/esm/index.js'
         const canvas = document.getElementById('container')
         const gl = canvas.getContext('webgl')
+        //相机
+        const eye = [0.1, 0.2, 0.5]//相机视角位置
+        const target = [0, 0, 0] //目标位置
+        const up = [0, 1, 0] //法向
+        let angle = 0;//相机旋转角度
+        const radius = 0.5; // 相机距离目标的距离
+
         let vertexShader = `
         attribute vec3 a_position;
         attribute vec4 a_color;
@@ -45,13 +52,15 @@
         void main(){
             float d=distance(gl_PointCoord,vec2(0.5,0.5));
             if(d>0.5){
-                discard;
+                gl_FragColor=vec4(1.0,0.0,0.0,1.0);
             }else{
                 gl_FragColor=v_color;
             }
         }
         `
-        let viewMatrix, vertices, tween
+        let viewMatrix = mat4.create()
+        let vertices
+        let tween
         initShader(gl, vertexShader, fragmentShader)
         initMatrixs()
         initVertexBuffer()
@@ -59,10 +68,6 @@
 
         function initMatrixs() {
             //视图矩阵
-            viewMatrix = mat4.create()
-            const eye = [0.2, 0.2, 0.5] //相机位置
-            const target = [0, 0, 0] //目标位置
-            const up = [0, 1, 0] //法向
             viewMatrix = mat4.lookAt(viewMatrix, eye, target, up)
             let viewMatrixInfo = gl.getUniformLocation(gl.program, 'u_viewMatrix')
             gl.uniformMatrix4fv(viewMatrixInfo, false, viewMatrix)
@@ -78,8 +83,7 @@
                         0.0, 0.0, 1.0, 1)
                 }
             }
-            let FSIZE = new Float32Array(vertices).BYTES_PER_ELEMENT
-            console.log(FSIZE);
+            let FSIZE = new Float32Array(vertices).BYTES_PER_ELEMENT //4
             let buffer = gl.createBuffer()
             gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW)
@@ -102,17 +106,33 @@
             tween && tween.update(time)
             vertices = []
             let color = 0
+
             const [minPosX, maxPosX, minPosZ, maxPosZ] = [-0.5, 0.5, -1, 1]
             for (let i = minPosZ; i < maxPosZ; i += 0.04) {
                 for (let j = minPosX; j < maxPosX; j += 0.03) {
                     //根据time计算正弦函数相位
-                    const posY = Math.sin((j + time * 0.0005) * 10) * 0.05; // 调整振幅和频率以满足您的需求
-                    vertices.push(j, posY, i, posY * 10, 0.0, 1.0, posY * 10);
+                    const posY = Math.sin((j + time * 0.0002) * 10) * 0.05; // 调整振幅和频率
+                    vertices.push(j, posY, i, posY * 1, 0.0, 1.0, posY * 10);
                 }
             }
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW)
+            updateCamera(time)
             draw()
             requestAnimationFrame(render)
+        }
+
+
+        function updateCamera(time) {
+            const t = time * 0.0005; // 毫秒转秒
+            const speed = 30; // 每秒旋转 30 度
+            const angleDeg = (t * speed) % 360;
+            const angleRad = angleDeg * Math.PI / 180;
+            eye[0] = Math.sin(angleRad) * radius;
+            eye[2] = Math.cos(angleRad) * radius;
+
+            // eye[0] = Math.sin(angle) * radius;
+            // eye[2] = Math.cos(angle) * radius;
+            initMatrixs()
         }
 
 
